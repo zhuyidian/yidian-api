@@ -1,0 +1,123 @@
+name: yidian-api
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
+      DOMAIN: ${DOMAIN:?DOMAIN is required}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    depends_on:
+      new-api:
+        condition: service_healthy
+    networks:
+      - frontend
+    logging: &default-logging
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  new-api:
+    image: ${NEW_API_IMAGE:-calciumion/new-api}:${NEW_API_VERSION:-v1.0.0-rc.15}
+    restart: unless-stopped
+    command: --log-dir /app/logs
+    environment:
+      SQL_DSN: postgresql://newapi:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/newapi?sslmode=disable
+      REDIS_CONN_STRING: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      CRYPTO_SECRET: ${CRYPTO_SECRET:?CRYPTO_SECRET is required}
+      TZ: ${TZ:-Asia/Shanghai}
+      NODE_NAME: ${NODE_NAME:-hk-01}
+      STREAMING_TIMEOUT: ${STREAMING_TIMEOUT:-300}
+      MAX_REQUEST_BODY_MB: ${MAX_REQUEST_BODY_MB:-32}
+      STREAM_SCANNER_MAX_BUFFER_MB: ${STREAM_SCANNER_MAX_BUFFER_MB:-64}
+      TLS_INSECURE_SKIP_VERIFY: ${TLS_INSECURE_SKIP_VERIFY:-false}
+      GLOBAL_API_RATE_LIMIT_ENABLE: ${GLOBAL_API_RATE_LIMIT_ENABLE:-true}
+      GLOBAL_API_RATE_LIMIT: ${GLOBAL_API_RATE_LIMIT:-360}
+      GLOBAL_API_RATE_LIMIT_DURATION: ${GLOBAL_API_RATE_LIMIT_DURATION:-180}
+      GLOBAL_WEB_RATE_LIMIT_ENABLE: ${GLOBAL_WEB_RATE_LIMIT_ENABLE:-true}
+      GLOBAL_WEB_RATE_LIMIT: ${GLOBAL_WEB_RATE_LIMIT:-120}
+      GLOBAL_WEB_RATE_LIMIT_DURATION: ${GLOBAL_WEB_RATE_LIMIT_DURATION:-180}
+      CRITICAL_RATE_LIMIT_ENABLE: ${CRITICAL_RATE_LIMIT_ENABLE:-true}
+      CRITICAL_RATE_LIMIT: ${CRITICAL_RATE_LIMIT:-20}
+      CRITICAL_RATE_LIMIT_DURATION: ${CRITICAL_RATE_LIMIT_DURATION:-1200}
+      ERROR_LOG_ENABLED: "true"
+      BATCH_UPDATE_ENABLED: "true"
+      TRUSTED_REDIRECT_DOMAINS: ${TRUSTED_REDIRECT_DOMAINS:-}
+    volumes:
+      - new_api_data:/data
+      - new_api_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/api/status | grep -q '\"success\"[[:space:]]*:[[:space:]]*true'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - frontend
+      - backend
+    logging: *default-logging
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: newapi
+      POSTGRES_USER: newapi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U newapi -d newapi"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+    logging: *default-logging
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    networks:
+      - backend
+    logging: *default-logging
+
+networks:
+  frontend:
+  backend:
+    internal: true
+
+volumes:
+  caddy_data:
+  caddy_config:
+  caddy_logs:
+  new_api_data:
+  new_api_logs:
+  postgres_data:
+  redis_data:
