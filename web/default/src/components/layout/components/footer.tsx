@@ -125,13 +125,13 @@ function LegalLinks(props: { leadingSeparator?: boolean }) {
 function ProjectAttribution(props: { currentYear: number; inline?: boolean }) {
   const { t } = useTranslation()
   const content = (
-    <span className='text-muted-foreground/45'>
+    <span className='text-muted-foreground/15 transition-colors hover:text-muted-foreground/35'>
       &copy; {props.currentYear}{' '}
       <a
         href='https://github.com/QuantumNous/new-api'
         target='_blank'
         rel='noopener noreferrer'
-        className='text-foreground/70 hover:text-foreground font-medium transition-colors'
+        className='text-muted-foreground/25 hover:text-muted-foreground/55 font-normal transition-colors'
       >
         {t('New API')}
       </a>
@@ -142,7 +142,7 @@ function ProjectAttribution(props: { currentYear: number; inline?: boolean }) {
     return content
   }
   return (
-    <div className='text-muted-foreground/45 text-center text-xs sm:text-right'>
+    <div className='text-muted-foreground/15 text-center text-[9px] sm:text-right'>
       {content}
     </div>
   )
@@ -230,12 +230,8 @@ export function Footer(props: FooterProps) {
         )}
       >
         <div className='mx-auto w-full max-w-6xl px-6 py-5'>
-          <div className='bg-muted/20 border-border/50 flex flex-col items-center justify-between gap-4 rounded-2xl border px-4 py-4 backdrop-blur-sm sm:flex-row sm:px-5'>
-            <div
-              className='custom-footer text-muted-foreground min-w-0 text-center text-sm sm:text-left'
-              dangerouslySetInnerHTML={{ __html: footerHtml }}
-            />
-            <div className='border-border/60 text-muted-foreground/45 flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t pt-4 text-xs sm:w-auto sm:justify-end sm:border-t-0 sm:border-l sm:pt-0 sm:pl-5'>
+          <div className='flex items-center justify-center px-4 py-3 sm:justify-end sm:px-5'>
+            <div className='text-muted-foreground/15 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[9px] sm:justify-end'>
               <LegalLinks />
               <ProjectAttribution currentYear={currentYear} inline />
             </div>
@@ -289,15 +285,10 @@ export function Footer(props: FooterProps) {
           )}
         </div>
 
-        {/* Copyright + optional legal links inline on the left, project
-            attribution on the right; wraps on narrow screens. */}
-        <div className='border-border/30 mt-12 flex flex-col items-center justify-between gap-x-3 gap-y-2 border-t pt-6 sm:flex-row'>
-          <div className='text-muted-foreground/40 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs sm:justify-start'>
-            <span>
-              &copy; {currentYear} {displayName}.{' '}
-              {props.copyright ?? t('footer.defaultCopyright')}
-            </span>
-            <LegalLinks leadingSeparator />
+        {/* Optional legal links and project attribution; wraps on narrow screens. */}
+        <div className='border-border/30 mt-12 flex flex-col items-center justify-end gap-x-3 gap-y-2 border-t pt-6 sm:flex-row'>
+          <div className='text-muted-foreground/15 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[9px] sm:justify-start'>
+            <LegalLinks />
           </div>
           <ProjectAttribution currentYear={currentYear} />
         </div>

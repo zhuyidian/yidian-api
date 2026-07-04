@@ -1,3 +1,4 @@
+import fs from 'fs'
 import path from 'path'
 import { createRequire } from 'module'
 import { fileURLToPath } from 'url'
@@ -6,12 +7,56 @@ import { pluginReact } from '@rsbuild/plugin-react'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
+const resolvePackageDir = (
+  packageName: string,
+  resolver: NodeJS.Require = require,
+) => {
+  try {
+    return path.dirname(resolver.resolve(`${packageName}/package.json`))
+  } catch {
+    let currentDir = path.dirname(resolver.resolve(packageName))
+    while (currentDir !== path.dirname(currentDir)) {
+      if (fs.existsSync(path.join(currentDir, 'package.json'))) {
+        return currentDir
+      }
+      currentDir = path.dirname(currentDir)
+    }
+    throw new Error(`Unable to resolve package directory for ${packageName}`)
+  }
+}
 const semiUiDir = path.resolve(
   path.dirname(require.resolve('@douyinfe/semi-ui')),
   '../..',
 )
 const dateFnsDir = path.dirname(require.resolve('date-fns/package.json'))
 const dateFnsTzDir = path.dirname(require.resolve('date-fns-tz/package.json'))
+const reactVChartDir = resolvePackageDir('@visactor/react-vchart')
+const vchartDir = resolvePackageDir('@visactor/vchart')
+const vchartRequire = createRequire(path.join(vchartDir, 'package.json'))
+const vchartThemeUtilsDir = resolvePackageDir('@visactor/vchart-theme-utils')
+const vchartSemiThemeDir = resolvePackageDir('@visactor/vchart-semi-theme')
+const vchartPeerPackages = [
+  '@visactor/vdataset',
+  '@visactor/vgrammar-core',
+  '@visactor/vgrammar-hierarchy',
+  '@visactor/vgrammar-projection',
+  '@visactor/vgrammar-sankey',
+  '@visactor/vgrammar-util',
+  '@visactor/vgrammar-wordcloud',
+  '@visactor/vgrammar-wordcloud-shape',
+  '@visactor/vrender-components',
+  '@visactor/vrender-core',
+  '@visactor/vrender-kits',
+  '@visactor/vscale',
+  '@visactor/vutils',
+  '@visactor/vutils-extension',
+]
+const vchartPeerAliases = Object.fromEntries(
+  vchartPeerPackages.map((packageName) => [
+    packageName,
+    resolvePackageDir(packageName, vchartRequire),
+  ]),
+)
 
 export default defineConfig(({ envMode }) => {
   const env = loadEnv({ mode: envMode, prefixes: ['VITE_'] })
@@ -45,6 +90,11 @@ export default defineConfig(({ envMode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+        '@visactor/react-vchart': reactVChartDir,
+        '@visactor/vchart': vchartDir,
+        '@visactor/vchart-semi-theme': vchartSemiThemeDir,
+        '@visactor/vchart-theme-utils': vchartThemeUtilsDir,
+        ...vchartPeerAliases,
         '@douyinfe/semi-ui/dist/css/semi.css': path.resolve(
           semiUiDir,
           'dist/css/semi.css',
