@@ -138,9 +138,11 @@ function ProjectAttribution(props: { currentYear: number; inline?: boolean }) {
       . {t(NEW_API_FOOTER_ATTRIBUTION_KEY)}
     </span>
   )
+  return null
   if (props.inline) {
     return content
   }
+  
   return (
     <div className='text-muted-foreground/15 text-center text-[9px] sm:text-right'>
       {content}
